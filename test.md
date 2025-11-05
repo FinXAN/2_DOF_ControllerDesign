@@ -2,15 +2,11 @@
 
 Test Case
 
- $$ P(s)=\frac{2s+10}{s^2 (s+1)}=\frac{b(s)}{a(s)} $$ 
-
--  n = 3 （分母阶数）deg f(s) = 3 
--  稳定零点阶数 $\deg \left(b_s \left(s\right)\right)=1$ 
--  k >= 2 
+ $$ P(s)=\frac{s^4 +10s^3 -12s^2 -104s+160}{s^6 +170s^5 +8400s^4 +148000s^3 +800000s^2 }=\frac{b(s)}{a(s)} $$ 
 ```matlab
 syms s
-b = [2 10];
-a = [1 1 0 0];
+b = [1 10 -12 -104 160];
+a = [1 170 8400 148000 800000 0 0];
 P = tf(b,a);
 ```
 
@@ -35,11 +31,13 @@ r = roots(cpoly);
 
  $$ c\left(s\right)=f\left(s\right)h\left(s\right) $$ 
 ```matlab
-n = numel(a) - 1;       % deg a = 3
-m = numel(p) - 1;       % deg p = 0
-% 选前 n 个根构成 f，其余为 h
-f = poly(r(1:n));
-h = poly(r(n+1:end));
+n = numel(a) - 1;       
+m = numel(p) - 1;
+[f, h] = split_roots_real_coeffs(r, n);
+% 验证
+assert(length(f)-1 == n, 'deg f != n');
+assert(length(h)-1 == m, 'deg h != m');
+
 ```
 
  $$ c\left(s\right)=a\left(s\right)p\left(s\right)+b\left(s\right)q\left(s\right)=f\left(s\right)h\left(s\right),\deg \left(f\right)=\deg \left(a\right),\deg \left(h\right)=\deg \left(p\right) $$ 
@@ -60,7 +58,7 @@ Y = tf(q,h);
  $$ \frac{f\left(s\right)}{b_s \left(s\right)b_u \left(0\right)} $$ 
 ```matlab
 % 根据理论修复Q1计算
-alphas = [100 30 10 5];   % k=4 for strictly proper
+alphas = [3 3 3 3]; 
 
 b_roots = roots(b);
 stable_roots = b_roots(real(b_roots) < 0);  
@@ -71,18 +69,36 @@ b_s = poly(stable_roots);
 b_u = poly(unstable_roots);  
 b_u_0 = polyval(b_u, 0);
 
-% Q1 = f(s)/(b_s(s)·b_u(0)) · ∏(α_i/(s+α_i))
-% 先计算 f(s)/(b_s(s)·b_u(0))
-numerator_part = tf(f, 1);
-denominator_part = tf(conv(b_s, [b_u_0]), 1);
-Q1_base = numerator_part / denominator_part;
+```
+
+计算k所需要的数值 
+
+ $$ k\ge \deg \;f\left(s\right)-{\deg \;b}_s \left(s\right) $$ 
+```matlab
+% ========== 新增：计算k值 ==========
+deg_f = length(f) - 1;           % deg f(s)
+deg_b_s = length(b_s) - 1;       % deg b_s(s)
+min_k = deg_f - deg_b_s;
+current_k = length(alphas);
+if current_k < min_k
+    warning('k值不足: 当前k=%d, 需要k≥%d。自动调整k值。', current_k, min_k);
+    % 补充额外的α值
+    additional_alphas = 5 * ones(1, min_k - current_k);  % 使用较小的α值
+    alphas = [alphas, additional_alphas];
+    fprintf('调整后的alphas: %s\n', mat2str(alphas));
+end
+
+b_u_0_value = polyval(b_u, 0);  % 这是标量值
+denominator_poly = b_s * b_u_0_value;  % b_s(s) * b_u(0)
+Q1_base = tf(f, denominator_poly);
 
 % 然后乘以抵消项
 for a_i = alphas
     Q1_base = Q1_base * tf(a_i, [1 a_i]);
 end
 
-Q1 = Q1_base;
+Q1 = minreal(Q1_base);
+
 Q2 = tf(1, [1 10]);
 
 ```
