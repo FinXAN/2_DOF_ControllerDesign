@@ -1,3 +1,27 @@
+## Main Algorithm 
+
+First we introduce some notation. Consider an arbitrary polynomial with real coefficients
+
+$$f(s)=f_0s^n+f_1s^{n-1}+\cdots+f_n,$$
+
+whose degree, denoted by deg *f*(*s*), is no larger than *n*. Correspondingly to the polynomial *f*(*s*), define
+
+$$\boldsymbol{f}:=\begin{bmatrix}f_0\\\vdots\\f_n\end{bmatrix},\quad\boldsymbol{L}_f:=\begin{bmatrix}f_0&0&\cdots&0\\f_1&f_0&\ddots&\vdots\\\vdots&\ddots&\ddots&0\\f_{n-1}&\cdots&f_1&f_0\end{bmatrix}\quad\mathrm{and}\quad\boldsymbol{U}_f:=\begin{bmatrix}f_n&f_{n-1}&\cdots&f_1\\0&f_n&\ddots&\vdots\\\vdots&\ddots&\ddots&f_{n-1}\\0&\cdots&0&f_n\end{bmatrix}$$
+
+Let *J* be a sign matrix, defined as
+
+$$\boldsymbol{J}:=\begin{bmatrix}(-1)^{n-1}\\&\ddots&&\\&&-1\\&&&1\end{bmatrix}.$$
+
+The matrices $L_f$ , $U_f$ and *J* are helpful in transforming a polynomial equation into a system of linear equations. As we shall see, such a transformation plays an important role in the proposed polynomial approach.
+
+Suppose we are given an *n*th order plant
+
+$$P(s)=\frac{b(s)}{a(s)}=\frac{b_0s^n+b_1s^{n-1}+\cdots+b_n}{a_0s^n+a_1s^{n-1}+\cdots+a_n},$$
+
+where $a_0\neq 0$ , and *a*(*s*) and *b*(*s*) are coprime. The following algorithm computes an optimally robust controller
+
+$$C_{\mathrm{opt}}(s)=\arg\min_{C(s)}\|P(s)\#C(s)\|_\infty.$$
+
 ## **Algorithm 1** 
 
 **Step 1**: 
