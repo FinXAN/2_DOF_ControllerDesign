@@ -25,21 +25,21 @@ function [rho_H, dominant_eigenvalue, e, eigenvalues] = compute_eigen_properties
         case 'first'
             if abs(e(1)) > eps
                 e = e / e(1);
-                fprintf('使第一个元素为1\n');
+                %fprintf('使第一个元素为1\n');
             else
-                warning('特征向量第一个元素接近零，使用单位范数归一化');
+                warning('特征向量第一个元素接近零，使用单位归一化');
                 e = e / norm(e);
             end
             
         case 'unit'
             e = e / norm(e);
-            fprintf(unit\n');
+            fprintf('unit\n');
             
         case 'none'
             fprintf('none\n');
             
         otherwise
-            error('未知的归一化方式: %s', normalization_type);
+            error('未知的归一化: %s', normalization_type);
     end
     
     

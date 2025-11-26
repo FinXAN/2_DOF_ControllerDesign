@@ -22,13 +22,13 @@ function [a_filled, b_filled, n] = determine_n(a_coeff, b_coeff)
     a_filled = pad_coefficients(a_clean, n);
     b_filled = pad_coefficients(b_clean, n);
     
-    fprintf('检测到多项式阶数: n = %d\n', n);
-    fprintf('a(s) 阶数: %d, b(s) 阶数: %d\n', deg_a, deg_b);
-    fprintf('填充后系数: a(s) = ');
-    fprintf('%d ', a_filled);
-    fprintf(', b(s) = ');
-    fprintf('%d ', b_filled);
-    fprintf('\n');
+    %fprintf('检测到多项式阶数: n = %d\n', n);
+    %fprintf('a(s) 阶数: %d, b(s) 阶数: %d\n', deg_a, deg_b);
+    %fprintf('填充后系数: a(s) = ');
+    %fprintf('%d ', a_filled);
+    %fprintf(', b(s) = ');
+    %fprintf('%d ', b_filled);
+    %fprintf('\n');
 end
 
 function clean_coeff = remove_leading_zeros(coeff)

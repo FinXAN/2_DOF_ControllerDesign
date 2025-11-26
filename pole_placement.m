@@ -31,7 +31,7 @@ function [p_coeff, q_coeff, e_poly,p_poly,q_poly] = pole_placement(Sylvester, L_
     end
     
     
-    fprintf('最优控制器: C_opt(s) = q(s)/p(s)\n');
+    %fprintf('最优控制器: C_opt(s) = q(s)/p(s)\n');
     p_poly = coeffs_to_polynomial(p_coeff);
     q_poly = coeffs_to_polynomial(q_coeff);
 

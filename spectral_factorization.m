@@ -8,30 +8,30 @@ function d_coeff = spectral_factorization(a_coeff, b_coeff)
     n_b = get_polynomial_degree(b_coeff);
     n = max(n_a, n_b);
 
-    fprintf('输入多项式: a(s) 阶数=%d, b(s) 阶数=%d\n', n_a, n_b);
+    %fprintf('输入多项式: a(s) 阶数=%d, b(s) 阶数=%d\n', n_a, n_b);
     
     % 步骤1：构造 a(-s)a(s) + b(-s)b(s)
     poly_sum = compute_self_conjugate_sum(a_coeff, b_coeff, n);
     
-    fprintf('a(-s)a(s) + b(-s)b(s) 的系数: ');
-    fprintf('%.4f ', poly_sum);
-    fprintf('\n');
+    %fprintf('a(-s)a(s) + b(-s)b(s) 的系数: ');
+    %fprintf('%.4f ', poly_sum);
+    %fprintf('\n');
     
     % 步骤2：求根并选择稳定根
     roots_all = roots(poly_sum);
     stable_roots = roots_all(real(roots_all) < 0);
     
-    fprintf('所有根: ');
-    fprintf('%.4f%+.4fi ', [real(roots_all), imag(roots_all)]');
-    fprintf('\n');
+    %fprintf('所有根: ');
+    %fprintf('%.4f%+.4fi ', [real(roots_all), imag(roots_all)]');
+    %fprintf('\n');
     
-    fprintf('稳定根: ');
-    if ~isempty(stable_roots)
-        fprintf('%.4f%+.4fi ', [real(stable_roots), imag(stable_roots)]');
-    else
-        fprintf('无稳定根');
-    end
-    fprintf('\n');
+    %fprintf('稳定根: ');
+    %if ~isempty(stable_roots)
+    %    fprintf('%.4f%+.4fi ', [real(stable_roots), imag(stable_roots)]');
+    %else
+    %    fprintf('无稳定根');
+    %end
+    %fprintf('\n');
     
 
     if isempty(stable_roots)
@@ -45,9 +45,9 @@ function d_coeff = spectral_factorization(a_coeff, b_coeff)
         d_coeff = -d_coeff;
     end
     
-    fprintf('稳定多项式 d(s) 的系数: ');
-    fprintf('%.6f ', d_coeff);
-    fprintf('\n');
+    %fprintf('稳定多项式 d(s) 的系数: ');
+    %fprintf('%.6f ', d_coeff);
+    %fprintf('\n');
     verify_factorization(a_coeff, b_coeff, d_coeff, n);
 
 end

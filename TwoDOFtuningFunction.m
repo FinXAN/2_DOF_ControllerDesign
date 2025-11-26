@@ -1,4 +1,4 @@
-function [C1, C2,T] = TwoDOFtuningFunction(num,denum,alphas)
+function C1 = TwoDOFtuningFunction(num,denum,alphas)
 
 arguments
     num (1,:){mustBeNumeric}
@@ -73,6 +73,5 @@ end
 Q1 = minreal(Q1_base);
 Q2 = tf(1, [1 10]);
 C1 = minreal(Q1/(X-N*Q2));
-C2  = minreal((Y+M*Q2)/(X-N*Q2));
-T = (P*C1)/(1+P*C2);
+%% C2  = minreal((Y+M*Q2)/(X-N*Q2));
 end
