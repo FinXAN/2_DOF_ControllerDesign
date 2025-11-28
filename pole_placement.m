@@ -22,13 +22,13 @@ function [p_coeff, q_coeff, e_poly,p_poly,q_poly] = pole_placement(Sylvester, L_
     % 构造 e(s) 多项式
     e_poly = flip(e');  % 从特征向量构造多项式系数
     
-    for i = 1:length(e)
-        if imag(e(i)) == 0
-            fprintf('  %.6f\n', real(e(i)));
-        else
-            fprintf('  %.6f%+.6fi\n', real(e(i)), imag(e(i)));
-        end
-    end
+    %for i = 1:length(e)
+    %    if imag(e(i)) == 0
+    %        fprintf('  %.6f\n', real(e(i)));
+    %    else
+    %        fprintf('  %.6f%+.6fi\n', real(e(i)), imag(e(i)));
+    %    end
+    %end
     
     
     %fprintf('最优控制器: C_opt(s) = q(s)/p(s)\n');
