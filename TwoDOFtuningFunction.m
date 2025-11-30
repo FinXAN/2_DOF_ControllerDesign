@@ -29,14 +29,14 @@ r = roots(cpoly);
 
 n = numel(a) - 1;       
 m = numel(p) - 1;
-[f, h] = split_roots_real_coeffs(r, n);
+[f, h] = fw_1split_roots_real_coeffs(r, n);
 % 验证：deg f = n, deg h = m
 assert(length(f)-1 == n, 'deg f != n');
 assert(length(h)-1 == m, 'deg h != m');
 M = tf(a,f);
 N = tf(b,f);
 X = tf(p,h);
-Y = tf(q,h);[f, h] = split_roots_real_coeffs(r, n);
+Y = tf(q,h);[f, h] = fw_1split_roots_real_coeffs(r, n);
 % 验证
 assert(length(f)-1 == n, 'deg f != n');
 assert(length(h)-1 == m, 'deg h != m');
