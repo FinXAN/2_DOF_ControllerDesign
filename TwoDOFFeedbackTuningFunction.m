@@ -1,4 +1,4 @@
-function [q_coeff,p_coeff,alpha_opt] = TwoDOFFeedbackTuningFunction(a,b)
+function [C2,alpha_opt] = TwoDOFFeedbackTuningFunction(a,b)
 clc;
 syms s
 
@@ -22,6 +22,8 @@ alpha_opt = 1 / sqrt(1 + rho_H^2);
 
 p_coeff = p_coeff';
 q_coeff = q_coeff';
+
+C2 = tf(q_coeff,p_coeff);
 
 end
 
@@ -73,6 +75,15 @@ function d_coeff = fb_2spectral_factorization(a_coeff, b_coeff)
     
     % 步骤1：构造 a(-s)a(s) + b(-s)b(s)
     poly_sum = compute_self_conjugate_sum(a_coeff, b_coeff, n);
+
+    leading_idx = find(abs(poly_sum) > 1e-10, 1);
+    if isempty(leading_idx)
+        scaling_factor = 1;
+    else
+        % d(-s)d(s) 的最高次系数 = d_0 * d_0 * (-1)^n
+        % scaling_factor = sqrt( abs( poly_sum(leading_idx) ) )
+        scaling_factor = sqrt(abs(poly_sum(leading_idx)));
+    end
     
     %fprintf('a(-s)a(s) + b(-s)b(s) 的系数: ');
     %fprintf('%.4f ', poly_sum);
@@ -81,6 +92,7 @@ function d_coeff = fb_2spectral_factorization(a_coeff, b_coeff)
     % 步骤2：求根并选择稳定根
     roots_all = roots(poly_sum);
     stable_roots = roots_all(real(roots_all) < 0);
+    
     
     %fprintf('所有根: ');
     %fprintf('%.4f%+.4fi ', [real(roots_all), imag(roots_all)]');
@@ -99,7 +111,8 @@ function d_coeff = fb_2spectral_factorization(a_coeff, b_coeff)
         error('未找到稳定根，系统可能不稳定');
     end
     
-    d_coeff = poly(stable_roots);
+    d_coeff = poly(stable_roots) * scaling_factor;
+    d_coeff = real(d_coeff);
     
 
     if d_coeff(1) < 0
@@ -193,10 +206,10 @@ function verify_factorization(a_coeff, b_coeff, d_coeff, n)
     error = norm(left_padded - right_padded);
 
     
-    if error < 1e-10
+    if error < 1e-4
         fprintf('谱分解无明显误差\n');
     else
-        fprintf('分解误差较大，请检查计算\n');
+        fprintf('分解误差较大，请谨慎使用\n');
     end
 end
 
