@@ -23,6 +23,9 @@ alpha_opt = 1 / sqrt(1 + rho_H^2);
 p_coeff = p_coeff';
 q_coeff = q_coeff';
 
+% 尝试翻转系数（升幂排列）
+p_coeff = flip(p_coeff);  
+q_coeff = flip(q_coeff);  
 C2 = tf(q_coeff,p_coeff);
 
 end
