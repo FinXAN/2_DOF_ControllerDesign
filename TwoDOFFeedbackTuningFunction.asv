@@ -356,8 +356,7 @@ function [p_coeff, q_coeff, e_poly,p_poly,q_poly] = fb_6pole_placement(Sylvester
     % 构造 e(s) 
     e_poly = flip(e');  % 从特征向量构造多项式系数
     
-    %*******************************************************
-    %debug 用
+    
     %for i = 1:length(e)
     %    if imag(e(i)) == 0
     %        fprintf('  %.6f\n', real(e(i)));
@@ -365,18 +364,16 @@ function [p_coeff, q_coeff, e_poly,p_poly,q_poly] = fb_6pole_placement(Sylvester
     %        fprintf('  %.6f%+.6fi\n', real(e(i)), imag(e(i)));
     %    end
     %end
-    %*******************************************************
     
     
-    
-    %fprintf('Optimal: C_opt(s) = q(s)/p(s)\n');
+    %fprintf('最优控制器: C_opt(s) = q(s)/p(s)\n');
     p_poly = coeffs_to_polynomial(p_coeff);
     q_poly = coeffs_to_polynomial(q_coeff);
 
 end
 
 function print_polynomial(coeff, var)
-% 打印, debug 用
+% 打印多项式
     terms = {};
     n = length(coeff) - 1;
     
@@ -419,8 +416,8 @@ function print_polynomial(coeff, var)
 end
 function poly_s = coeffs_to_polynomial(coeffs, var_name)
 % 将系数向量转换为符号多项式
-% 输入：coeffs - 多项式系数（默认为's'）
-% 输出：poly_s 
+% 输入：coeffs - 多项式系数（从高阶到低阶），var_name - 变量名（默认为's'）
+% 输出：poly_s - 符号多项式
 
     if nargin < 2
         var_name = 's';

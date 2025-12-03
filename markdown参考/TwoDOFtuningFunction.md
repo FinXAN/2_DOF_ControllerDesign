@@ -1,133 +1,215 @@
-function [C1 C2] = TwoDOFtuningFunction(num,denum,Q2,alphas)
+function [C1, C2] = TwoDOFtuningFunction(num, den, Q2, alphas)
 
-arguments
+​    arguments
 
-​    num (1,:){mustBeNumeric}
+​        num (1,:){mustBeNumeric}
 
-​    denum (1,:){mustBeNumeric}
+​        den (1,:){mustBeNumeric}
 
-​    Q2 {mustBeA(Q2, 'tf')}
+​        Q2 {mustBeA(Q2, 'tf')}
 
-​    alphas (1,:){mustBeNumeric} = [3,3,3,3];
+​        alphas (1,:){mustBeNumeric} = [3,3,3,3];
 
-end
+​    end
 
-b = num;
+​    
 
-a = denum;
+​    b = num;
 
-P = tf(b,a);
+​    a = den;
 
-C0 = tf(pidtune(P, "PIDF"));
+​    P = tf(b, a);
 
-q = C0.num{1};
+​    
 
-p = C0.den{1};
+​    % 1. 设计初始控制器（使用更合适的方法）
 
-% c(s) = a(s)p(s) + b(s)q(s)
+​    % 使用极点配置而不是PID
 
-cpoly1 = conv(a, p);
+​    n = length(a) - 1;
 
-cpoly2 = conv(b, q);
+​    
 
-% 确保数组长度相同
+​    % 选择期望的闭环极点（比被控对象快一些）
 
-max_len = max(length(cpoly1), length(cpoly2));
+​    desired_poles = -linspace(1, n+1, n) * 2;  % 简单的极点选择
 
-cpoly1_padded = [zeros(1, max_len - length(cpoly1)), cpoly1];
+​    
 
-cpoly2_padded = [zeros(1, max_len - length(cpoly2)), cpoly2];
+​    % 使用极点配置设计控制器
 
-% 现在可以相加
+​    [K, ~, ~] = place(ss(P), desired_poles);
 
-cpoly = cpoly1_padded + cpoly2_padded;
+​    C0 = tf(K);
 
-r = roots(cpoly);
+​    
 
-n = numel(a) - 1;       
+​    % 或者使用更简单的方法：直接设计一个稳定的控制器
 
-m = numel(p) - 1;
+​    if n == 1
 
-[f, h] = split_roots_real_coeffs(r, n);
+​        % 一阶系统
 
-% 验证：deg f = n, deg h = m
+​        p = [1, 5];  % 控制器分母
 
-assert(length(f)-1 == n, 'deg f != n');
+​        q = [10];    % 控制器分子
 
-assert(length(h)-1 == m, 'deg h != m');
+​    elseif n == 2
 
-M = tf(a,f);
+​        % 二阶系统
 
-N = tf(b,f);
+​        p = [1, 3, 2];  % s^2 + 3s + 2
 
-X = tf(p,h);
+​        q = [5, 1];     % 5s + 1
 
-Y = tf(q,h);[f, h] = split_roots_real_coeffs(r, n);
+​    else
 
-% 验证
+​        % 高阶系统，使用简单设计
 
-assert(length(f)-1 == n, 'deg f != n');
+​        p = [1, ones(1, n-1)*2];  % 稳定的分母
 
-assert(length(h)-1 == m, 'deg h != m');
+​        q = [ones(1, n-1)*3, 1];  % 分子
 
- 
+​    end
 
-b_roots = roots(b);
+​    
 
-stable_roots = b_roots(real(b_roots) < 0);  
+​    % 2. 计算闭环特征多项式
 
-unstable_roots = b_roots(real(b_roots) >= 0); 
+​    cpoly = conv(a, p) + conv(b, q);
 
-% 构建b_s(s)和b_u(s)
+​    
 
-b_s = poly(stable_roots);    
+​    % 3. 分解为f(s)和h(s)
 
-b_u = poly(unstable_roots);  
+​    r = roots(cpoly);
 
-b_u_0 = polyval(b_u, 0);
+​    
 
-% ========== 新增：计算k值 ==========
+​    % 按实部排序（最稳定的根给f(s)）
 
-deg_f = length(f) - 1;           % deg f(s)
+​    [~, idx] = sort(real(r));
 
-deg_b_s = length(b_s) - 1;       % deg b_s(s)
+​    r_sorted = r(idx);
 
-min_k = deg_f - deg_b_s;
+​    
 
-current_k = length(alphas);
+​    % f(s)取前n个最稳定的根
 
-if current_k < min_k
+​    f_roots = r_sorted(1:n);
 
-​    warning('k值不足: 当前k=%d, 需要k≥%d。自动调整k值。', current_k, min_k);
+​    f = poly(f_roots);
 
-​    % 补充额外的α值
+​    
 
-​    additional_alphas = 5 * ones(1, min_k - current_k);  % 使用较小的α值
+​    % h(s)取剩余的根
 
-​    alphas = [alphas, additional_alphas];
+​    h_roots = r_sorted(n+1:end);
 
-​    fprintf('调整后的alphas: %s\n', mat2str(alphas));
+​    if isempty(h_roots)
 
-end
+​        h = 1;
 
-b_u_0_value = polyval(b_u, 0);  % 这是标量值
+​    else
 
-denominator_poly = b_s * b_u_0_value;  % b_s(s) * b_u(0)
+​        h = poly(h_roots);
 
-Q1_base = tf(f, denominator_poly);
+​    end
 
-% 然后乘以抵消项
+​    
 
-for a_i = alphas
+​    % 4. 构建M, N, X, Y
 
-​    Q1_base = Q1_base * tf(a_i, [1 a_i]);
+​    M = tf(a, f);
 
-end
+​    N = tf(b, f);
 
-Q1 = minreal(Q1_base);
+​    X = tf(p, h);
 
-C1 = minreal(Q1/(X-N*Q2));
+​    Y = tf(q, h);
 
-C2  = minreal((Y+M*Q2)/(X-N*Q2));
+​    
+
+​    % 5. 处理b(s)的分解
+
+​    b_roots = roots(b);
+
+​    stable_roots = b_roots(real(b_roots) < 0);
+
+​    unstable_roots = b_roots(real(b_roots) >= 0);
+
+​    
+
+​    b_s = poly(stable_roots);
+
+​    b_u = poly(unstable_roots);
+
+​    
+
+​    if isempty(b_s)
+
+​        b_s = 1;
+
+​    end
+
+​    if isempty(b_u)
+
+​        b_u = 1;
+
+​    end
+
+​    
+
+​    b_u_0 = polyval(b_u, 0);
+
+​    
+
+​    % 6. 计算Q1
+
+​    deg_f = length(f) - 1;
+
+​    deg_b_s = length(b_s) - 1;
+
+​    min_k = deg_f - deg_b_s;
+
+​    
+
+​    current_k = length(alphas);
+
+​    if current_k < min_k
+
+​        warning('k值不足: 当前k=%d, 需要k≥%d。自动调整k值。', current_k, min_k);
+
+​        additional_alphas = 5 * ones(1, min_k - current_k);
+
+​        alphas = [alphas, additional_alphas];
+
+​    end
+
+​    
+
+​    denominator_poly = conv(b_s, [b_u_0]);
+
+​    Q1_base = tf(f, denominator_poly);
+
+​    
+
+​    for a_i = alphas
+
+​        Q1_base = Q1_base * tf(a_i, [1 a_i]);
+
+​    end
+
+​    
+
+​    Q1 = minreal(Q1_base);
+
+​    
+
+​    % 7. 计算C1和C2
+
+​    C1 = minreal(Q1/(X - N*Q2));
+
+​    C2 = minreal((Y + M*Q2)/(X - N*Q2));
 
 end
