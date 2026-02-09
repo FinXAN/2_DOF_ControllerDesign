@@ -14,7 +14,7 @@ H = fb_4compute_H_matrix(a,b,d,n);
 % 对于一般情况
 [rho_H, dom_eig, e, eig_vals] = fb_5compute_eigen_properties(H);
 Sylvester = [L_a,L_b;U_a,U_b];
-[p_coeff, q_coeff, e_poly,p_poly,q_poly] = fb_6pole_placement(Sylvester, L_d, U_d, e, n);
+[p_coeff, q_coeff, e_poly] = fb_6pole_placement(Sylvester, L_d, U_d, e, n);
 
 
 % 最优控制器
@@ -23,10 +23,7 @@ alpha_opt = 1 / sqrt(1 + rho_H^2);
 p_coeff = p_coeff';
 q_coeff = q_coeff';
 
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-% 先 p 后 q 这里反过来才对，检查以下哪里反过来了
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-C2 = tf(p_coeff,q_coeff);
+C2 = tf(q_coeff,p_coeff);
 
 end
 
@@ -332,7 +329,7 @@ function [rho_H, dominant_eigenvalue, e, eigenvalues] = fb_5compute_eigen_proper
     
 end
 
-function [p_coeff, q_coeff, e_poly,p_poly,q_poly] = fb_6pole_placement(Sylvester, L_d, U_d, e, n)
+function [p_coeff, q_coeff, e_poly] = fb_6pole_placement(Sylvester, L_d, U_d, e, n)
 % 极点配置计算 p(s) 和 q(s) 的系数
 % 输入：Sylvester - Sylvester矩阵，L_d, U_d - d(s)的矩阵，e - 特征向量，n - 阶数
 % 输出：p_coeff, q_coeff - 多项式系数，e_poly - e(s)多项式
@@ -349,14 +346,16 @@ function [p_coeff, q_coeff, e_poly,p_poly,q_poly] = fb_6pole_placement(Sylvester
     % 根据论文公式(10): [p; q] = Sylvester^{-1} * [L_d; U_d] * e
     pq_vector = Sylvester \ [L_d; U_d] * e;
     
+    % 原来的公式应可能反了，先提取q再是p，不然对不上
     % 提取 p 和 q 的系数
-    p_coeff = pq_vector(1:n);
-    q_coeff = pq_vector(n+1:end);
+    q_coeff = pq_vector(1:n);
+    p_coeff = pq_vector(n+1:end);
     
     % 构造 e(s) 
     e_poly = flip(e');  % 从特征向量构造多项式系数
     
-    
+    %*******************************************************
+    %debug 用
     %for i = 1:length(e)
     %    if imag(e(i)) == 0
     %        fprintf('  %.6f\n', real(e(i)));
@@ -364,16 +363,15 @@ function [p_coeff, q_coeff, e_poly,p_poly,q_poly] = fb_6pole_placement(Sylvester
     %        fprintf('  %.6f%+.6fi\n', real(e(i)), imag(e(i)));
     %    end
     %end
+    %*******************************************************
     
     
-    %fprintf('最优控制器: C_opt(s) = q(s)/p(s)\n');
-    p_poly = coeffs_to_polynomial(p_coeff);
-    q_poly = coeffs_to_polynomial(q_coeff);
+    
 
 end
 
 function print_polynomial(coeff, var)
-% 打印多项式
+% 打印, debug 用
     terms = {};
     n = length(coeff) - 1;
     
@@ -416,8 +414,8 @@ function print_polynomial(coeff, var)
 end
 function poly_s = coeffs_to_polynomial(coeffs, var_name)
 % 将系数向量转换为符号多项式
-% 输入：coeffs - 多项式系数（从高阶到低阶），var_name - 变量名（默认为's'）
-% 输出：poly_s - 符号多项式
+% 输入：coeffs - 多项式系数（默认为's'）
+% 输出：poly_s 
 
     if nargin < 2
         var_name = 's';

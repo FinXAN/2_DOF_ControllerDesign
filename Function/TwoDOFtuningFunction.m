@@ -1,9 +1,9 @@
-function [Q1,C1,C2] = TwoDOFtuningFunction(num,denum,Q2,alphas)
+function C1 = TwoDOFtuningFunction(num,denum,C2,alphas)
 
 arguments
     num (1,:){mustBeNumeric}
     denum (1,:){mustBeNumeric}
-    Q2 {mustBeA(Q2, 'tf')}
+    C2 {mustBeA(C2, 'tf')}
     alphas (1,:){mustBeNumeric} = [3,3,3,3];
 end
 
@@ -11,7 +11,7 @@ b = num;
 a = denum;
 P = tf(b,a);
 
-C0 = tf(pidtune(P, "PIDF"));
+C0 = C2;
 q = C0.num{1};
 p = C0.den{1};
 % c(s) = a(s)p(s) + b(s)q(s)
@@ -72,8 +72,16 @@ for a_i = alphas
     Q1_base = Q1_base * tf(a_i, [1 a_i]);
 end
 Q1 = minreal(Q1_base);
-C1 = minreal(Q1/(X-N*Q2));
-C2  = minreal((Y+M*Q2)/(X-N*Q2));
+C1 = minreal(Q1/(X)); % 因为 Q2 是0，C1 按照参数化就是直接设计出来的   
+% 9.normlization for elimiatnating pole at (0,0)
+[~, den1] = tfdata(C1, 'v');
+if den1(end) == 0
+    s = tf('s');
+    C1 = minreal(C1*s); % remove exactly one integrator;
+end
+G0 = minreal((P*C1)/(1 + P*C2));
+K  = 1/dcgain(G0);
+C1 = K*C1;
 end
 
 function [f, h] = fw_1split_roots_real_coeffs(r, n, m)
@@ -155,4 +163,6 @@ function [f, h] = fw_1split_roots_real_coeffs(r, n, m)
     if any(abs(imag(h)) > tol)
         error('h(s)包含复数系数');
     end
+
 end
+
