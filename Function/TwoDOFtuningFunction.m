@@ -18,6 +18,7 @@ p = C0.den{1};
 cpoly1 = conv(a, p);
 cpoly2 = conv(b, q);
 
+
 % 确保数组长度相同
 max_len = max(length(cpoly1), length(cpoly2));
 cpoly1_padded = [zeros(1, max_len - length(cpoly1)), cpoly1];
@@ -29,14 +30,33 @@ r = roots(cpoly);
 
 n = numel(a) - 1;       
 m = numel(p) - 1;
-[f, h] = fw_1split_roots_real_coeffs(r, n,m);
+[f, h] = fw_split_roots_conjugate_blocks(r, n,m);
+
+
+%%% To check the thing
+assert(norm(imag(f)) < 1e-8);
+assert(norm(imag(h)) < 1e-8);
+%% Check something
+
+c_rebuilt = conv(f,h);
+c_rebuilt = c_rebuilt / c_rebuilt(1);
+
+%% Display the things there
+cpoly_n   = cpoly / cpoly(1);
+disp(norm(c_rebuilt - cpoly_n));
+disp([c_rebuilt(:), cpoly_n(:)]);
+
+%% Failure Assert
+
+assert(norm(c_rebuilt - cpoly_n) < 1e-6);
+
 % 验证：deg f = n, deg h = m
 assert(length(f)-1 == n, 'deg f != n');
 assert(length(h)-1 == m, 'deg h != m');
 M = tf(a,f);
 N = tf(b,f);
 X = tf(p,h);
-Y = tf(q,h);[f, h] = fw_1split_roots_real_coeffs(r, n,m);
+Y = tf(q,h);
 % 验证
 assert(length(f)-1 == n, 'deg f != n');
 assert(length(h)-1 == m, 'deg h != m');
@@ -81,88 +101,119 @@ if den1(end) == 0
 end
 G0 = minreal((P*C1)/(1 + P*C2));
 K  = 1/dcgain(G0);
+%K = 1/dcgain(C1);
 C1 = K*C1;
 end
 
-function [f, h] = fw_1split_roots_real_coeffs(r, n, m)
-    % 改进的根分解函数
-    % 输入：
-    %   r - 闭环特征多项式的所有根
-    %   n - f(s)的期望阶数（被控对象分母阶数）
-    %   m - h(s)的期望阶数（控制器分母阶数）
-    % 输出：
-    %   f, h - 实系数多项式系数向量
-    
-    tol = 1e-10;
-    
-    % 验证总根数
-    total_roots = length(r);
-    if total_roots ~= (n + m)
-        error('根数不匹配: 总根数=%d, 但n+m=%d', total_roots, n+m);
-    end
-    
-    % 1. 分离实根和复根
-    is_real = abs(imag(r)) < tol;
-    real_roots = r(is_real);
-    complex_roots = r(~is_real);
-    
-    % 2. 确保复根成对出现
-    if mod(length(complex_roots), 2) ~= 0
-        error('复根不成对出现，无法构造实系数多项式');
-    end
-    
-    % 3. 按实部排序（最稳定的根给f(s)）
-    [~, idx] = sort(real(r));
-    r_sorted = r(idx);
-    
-    % 4. 简单分配：前n个根给f(s)，剩余给h(s)
-    roots_f = r_sorted(1:n);
-    roots_h = r_sorted(n+1:end);
-    
-    % 5. 验证分配后的复根配对
-    % 检查f(s)的复根是否成对
-    complex_in_f = roots_f(abs(imag(roots_f)) > tol);
-    if ~isempty(complex_in_f)
-        for i = 1:length(complex_in_f)
-            root = complex_in_f(i);
-            conj_root = conj(root);
-            if ~any(abs(roots_f - conj_root) < tol)
-                warning('f(s)中的复根 %s 没有共轭配对', num2str(root));
-            end
-        end
-    end
-    
-    % 检查h(s)的复根是否成对
-    complex_in_h = roots_h(abs(imag(roots_h)) > tol);
-    if ~isempty(complex_in_h)
-        for i = 1:length(complex_in_h)
-            root = complex_in_h(i);
-            conj_root = conj(root);
-            if ~any(abs(roots_h - conj_root) < tol)
-                warning('h(s)中的复根 %s 没有共轭配对', num2str(root));
-            end
-        end
-    end
-    
-    % 6. 构建多项式
-    f = real(poly(roots_f));
-    h = real(poly(roots_h));
-    
-    % 7. 验证阶数
-    if length(f) - 1 ~= n
-        error('f(s)阶数错误: 期望%d, 实际%d', n, length(f)-1);
-    end
-    if length(h) - 1 ~= m
-        error('h(s)阶数错误: 期望%d, 实际%d', m, length(h)-1);
-    end
-    
-    % 8. 验证系数为实数
-    if any(abs(imag(f)) > tol)
-        error('f(s)包含复数系数');
-    end
-    if any(abs(imag(h)) > tol)
-        error('h(s)包含复数系数');
-    end
 
+
+%% AI Root Allocation logic
+
+function [f, h] = fw_split_roots_conjugate_blocks(r, n, m)
+tol = 1e-7;
+
+% Snap nearly-real roots to real
+mask_real = abs(imag(r)) < tol;
+r(mask_real) = real(r(mask_real));
+
+% ---- Build conjugate-safe blocks ----
+used = false(size(r));
+blocks = {};
+
+for i = 1:numel(r)
+	if used(i), continue; end
+	ri = r(i);
+
+	if abs(imag(ri)) < tol
+		blocks{end+1} = ri; %#ok<AGROW>
+		used(i) = true;
+	else
+		target = conj(ri);
+		j = find(~used & abs(r - target) < tol, 1, 'first');
+		if isempty(j)
+			error('Conjugate root not found for %g%+gi', real(ri), imag(ri));
+		end
+		blocks{end+1} = [ri; r(j)]; %#ok<AGROW>
+		used([i j]) = true;
+	end
+end
+
+% (Optional) sort blocks by stability (more negative real part first)
+key = zeros(1, numel(blocks));
+for k = 1:numel(blocks)
+	key(k) = mean(real(blocks{k}));
+end
+[~, idx] = sort(key, 'ascend');
+blocks = blocks(idx);
+
+% ---- Allocate blocks to reach exactly n roots (DP/backtracking) ----
+block_sizes = cellfun(@numel, blocks);
+B = numel(blocks);
+
+% Debug (optional)
+% disp(block_sizes);
+
+% dp(i, s) = can we reach sum s using blocks i..B ?
+dp = false(B+2, n+1);
+dp(B+1, 0+1) = true;
+
+for i = B:-1:1
+	for s = 0:n
+		keep = dp(i+1, s+1);
+
+		take = false;
+		if s >= block_sizes(i)
+			take = dp(i+1, (s - block_sizes(i)) + 1);
+		end
+
+		dp(i, s+1) = keep || take;
+	end
+end
+
+if ~dp(1, n+1)
+	error('No feasible block assignment to reach deg(f)=%d exactly.', n);
+end
+
+% reconstruct a choice
+choose = false(1, B);
+s = n;
+for i = 1:B
+	if s >= block_sizes(i) && dp(i+1, (s - block_sizes(i)) + 1)
+		choose(i) = true;
+		s = s - block_sizes(i);
+	end
+end
+if s ~= 0
+	error('Backtracking reconstruction failed.');
+end
+
+roots_f = [];
+roots_h = [];
+for i = 1:B
+	if choose(i)
+		roots_f = [roots_f; blocks{i}]; %#ok<AGROW>
+	else
+		roots_h = [roots_h; blocks{i}]; %#ok<AGROW>
+	end
+end
+
+if numel(roots_f) ~= n
+	error('Allocation bug: roots_f count %d, expected %d.', numel(roots_f), n);
+end
+if numel(roots_h) ~= m
+	error('Allocation bug: roots_h count %d, expected %d.', numel(roots_h), m);
+end
+
+% ---- Build polynomials ----
+f = poly(roots_f);
+h = poly(roots_h);
+
+% Clean tiny imaginary coefficient noise
+f(abs(imag(f)) < 100*tol) = real(f(abs(imag(f)) < 100*tol));
+h(abs(imag(h)) < 100*tol) = real(h(abs(imag(h)) < 100*tol));
+
+if norm(imag(f)) > 1e-6 || norm(imag(h)) > 1e-6
+	error('f or h has significant imaginary coefficients.');
+end
 end
 
