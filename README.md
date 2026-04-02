@@ -22,5 +22,5 @@ tracking_controller = TwoDOFtuningFunction(plant_num,plant_denum,stabilization_c
 
 #### Demo - Quanser Interactive Lab
 
-[demo vedio](./media/quanser_vedio.mp4) - Video under "./media/quanser_vedio.mp4" folder
+[demo vedio](https://streamable.com/c45owk) - Video available under "./media/quanser_vedio.mp4" folder
 
