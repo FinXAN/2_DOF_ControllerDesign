@@ -1,3 +1,5 @@
+
+
 # 2-DOF Robust Control Synthesis Framework
 
 ### 1. Project Purpose and Relationship to the Dissertation
@@ -31,3 +33,40 @@ The framework follows a modular "Feedback-then-Feedforward" design flow:
 │   └── quanser_video.mp4  # Hardware/Digital Twin demonstration
 ├── Main_Simulation.m      # Entry point for general MATLAB simulation
 └── README.md              # Project documentation
+```
+
+### 5. Control Topology
+The architecture employs a standard 2-DOF configuration where the feedback $C(s)$ ensures stability and disturbance rejection, while the feedforward $F(s)$ is synthesized to ensure optimal reference tracking.
+
+![System Topology](./media/layout.jpg)
+
+### 6. Minimum Working Example
+```matlab
+% Define the LTI Plant (e.g., Quanser Aero 2 model)
+plant_num = [2, 10];
+plant_denum = [1, 1, 0, 0];
+plant = tf(plant_num, plant_denum);
+
+% 1. Stabilize and tune for robustness
+stabilization_controller = TwoDOFFeedbackTuningFunction(plant);
+
+% 2. Shape for non-overshooting tracking
+tracking_controller = TwoDOFtuningFunction(plant_num, plant_denum, stabilization_controller);
+```
+
+### 7. Performance & Demonstration
+#### **Experimental Output**
+The synthesis ensures that the step response strictly follows the reference without overshoot, effectively overcoming the fundamental limitations of LTI feedback loops.
+
+![Non-overshoot Performance](./media/non-overshoot.jpg)
+
+#### **Demo Video (Quanser Interactive Lab)**
+A demonstration of the controller in a high-fidelity digital twin environment can be viewed via the link below:
+* **[Watch Online Demo Video](https://streamable.com/c45owk)**
+* **Local File**: A copy is available under the `./media/quanser_video.mp4` folder.
+
+### 8. Attribution of Third-Party Components
+* **Quanser Interactive Lab**: Digital twin environment provided by Quanser Inc.
+* **Reference Algorithms**: The spectral factorization logic for robust tuning is based on the optimal control frameworks discussed in the dissertation bibliography.
+* **Original Code**: All synthesis functions in the `./Function` directory and the automated tuning scripts were developed by the author for this Final Year Project.
+```
